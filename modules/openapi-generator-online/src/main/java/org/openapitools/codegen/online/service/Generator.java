@@ -20,6 +20,9 @@ package org.openapitools.codegen.online.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.parser.core.models.AuthorizationValue;
 import io.swagger.v3.parser.core.models.ParseOptions;
 import org.openapitools.codegen.CliOption;
@@ -35,11 +38,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Generator {
     private static Logger LOGGER = LoggerFactory.getLogger(Generator.class);
@@ -126,6 +126,58 @@ public class Generator {
         if (destPath == null) {
             destPath = language + "-" + type.getTypeName();
         }
+        //my addition
+        Paths existingPaths = openapi.getPaths();
+        Paths newPaths = (Paths) existingPaths.clone();
+        List<String> operationsSelectedByUser = opts.getOperationsSelected();
+        for(Map.Entry<String, PathItem> entry : existingPaths.entrySet()) {
+            System.out.println("Path: " + entry.getKey() + " Value: " + entry.getValue());
+            PathItem pathItem = entry.getValue();
+            List<Operation> allOperations = Arrays.asList(pathItem.getGet(), pathItem.getPost(), pathItem.getPut(), pathItem.getDelete(), pathItem.getOptions(), pathItem.getHead(), pathItem.getPatch(), pathItem.getTrace());
+            List<Operation> selectedOperations = allOperations.stream().filter(Objects::nonNull).filter(operation -> operationsSelectedByUser.contains(operation.getOperationId())).collect(Collectors.toList());
+            if(selectedOperations.isEmpty()) {
+                newPaths.remove(entry.getKey());
+            }else {
+                //TODO do it better
+                //0->get, 1->post, 2->put, 3->delete, 4->options, 5->head, 6->patch, 7->trace
+                for(int i = 0; i < allOperations.size(); i++){
+                    Operation o = allOperations.get(i);
+                    if(o == null) { continue;}
+                    if(!operationsSelectedByUser.contains(o.getOperationId())) {
+                        switch (i){
+                            case 0:
+                                pathItem.setGet(null);
+                                break;
+                            case 1:
+                                pathItem.setPost(null);
+                                break;
+                            case 2:
+                                pathItem.setPut(null);
+                                break;
+                            case 3:
+                                pathItem.setDelete(null);
+                                break;
+                            case 4:
+                                pathItem.setOptions(null);
+                                break;
+                            case 5:
+                                pathItem.setHead(null);
+                                break;
+                            case 6:
+                                pathItem.setPatch(null);
+                                break;
+                            case 7:
+                                pathItem.setTrace(null);
+                                break;
+                        }
+
+                    }
+                }
+                newPaths.put(entry.getKey(), pathItem);
+            }
+
+        }
+        openapi.setPaths(newPaths);
 
         ClientOptInput clientOptInput = new ClientOptInput();
         String outputFolder = getTmpFolder().getAbsolutePath() + File.separator + destPath;
