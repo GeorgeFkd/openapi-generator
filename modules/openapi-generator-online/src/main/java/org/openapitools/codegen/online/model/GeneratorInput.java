@@ -21,6 +21,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.parser.core.models.AuthorizationValue;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class GeneratorInput {
@@ -28,6 +30,12 @@ public class GeneratorInput {
     private Map<String, String> options;
     private String openAPIUrl;
     private AuthorizationValue authorizationValue;
+
+    private List<String> operationsSelected = new ArrayList<>();
+
+    public List<String> getOperationsSelected() {
+        return operationsSelected;
+    }
 
     public AuthorizationValue getAuthorizationValue() {
         return authorizationValue;
